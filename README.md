@@ -1,4 +1,4 @@
-# Drag and Drop OS file/folder(s) into uifigure
+# Drag and Drop OS file/folder(s) into Matlab uifigure
 [![View uiFileDnD on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/80656-uifilednd)
 
 This single file implementation can set up a callback fired when files and/or folders are dropped onto a uifigure component. 
@@ -8,3 +8,5 @@ In the callback, full file/folder names are captured for user to decide the acti
 Example to drop file/folder into uilistbox:
     
     DnD_uifigure(uilistbox(uifigure), @(~,dat)disp(dat))
+
+Note: tested under R2020b. Won't work for R2019b or earlier. R2020a not tested.
