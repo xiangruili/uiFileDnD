@@ -7,6 +7,7 @@ In the callback, full file/folder names are captured for user to decide the acti
 
 Example to drop file/folder into uilistbox:
     
-    DnD_uifigure(uilistbox(uifigure), @(~,dat)disp(dat))
+    target = uilistbox(uifigure, 'Position', [80 100 400 100]);
+    DnD_uifigure(target, @(o,dat)set(o,'Items',dat.names));
 
-Note: tested under R2020b. Won't work for R2019b or earlier. R2020a not tested.
+Note: the DnD works only for Matlab R2020b or later.
