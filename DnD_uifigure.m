@@ -83,7 +83,7 @@ function JS_DnD_html
 %             e.returnValue = false
 %             if(!(htmlComponent.Data.hasOwnProperty("dropZone"))) return
 %             var n = htmlComponent.Data.dropZone.length
-%             for(var i = 0; i < n && n > 1; i++) {
+%             for(var i = n-1; i >= 0 && n > 1; i--) {
 %                 if(inRect(e.clientX, e.clientY, htmlComponent.Data.dropZone[i])) break
 %             }
 %             htmlComponent.Data = {
