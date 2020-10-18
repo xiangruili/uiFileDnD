@@ -26,12 +26,13 @@ end
 fh = ancestor(target, 'figure');
 h = findall(fh, 'Type', 'uihtml', 'Tag', 'uiFileDnD');
 if ~isempty(h)
-    h.UserData{end+1} = {target dropFcn};
+    h.UserData(end+1,:) = {target dropFcn};
     return;
 end
+
 h = uihtml(fh, 'Position', [1 1 0 0], 'HandleVisibility', 'off', ...
-    'DataChangedFcn', @DnD_callback, 'UserData', {{target dropFcn}}, ...
-    'Tag', 'uiFileDnD', 'HTMLSource', help('DnD_uifigure>JS_DnD_html'));
+    'DataChangedFcn', @DnD_callback, 'UserData', {target dropFcn}, ...
+    'Tag', 'uiFileDnD', 'HTMLSource', help('DnD_uifigure>DnD_callback'));
 nam = fh.Name;
 fh.Name = char(randi(9,1,4)+128); % rename to no-show name
 drawnow; ww = matlab.internal.webwindowmanager.instance.windowList;
@@ -42,66 +43,62 @@ if ~ismethod(ww, 'enableDragAndDropAll')
 end
 ww.enableDragAndDropAll; % enable DnD to whole uifigure
 ww.FileDragDropCallback = {@dragEnter h};
+dragEnter(ww, '', h); h.Position = [1 1 0 0]; % exercise to reduce "+Copy" time
 
 %% fired when drag enters uifigure
-function dragEnter(~, names, h)
+function dragEnter(ww, names, h)
+if h.Position(3)>0, return; end % if called repeatedly, disable ww only once
+ww.setActivateCurrentWindow(false); drawnow; % avoid default open behavior
 hs = allchild(h.Parent);
 if h ~= hs(1), h.Parent.Children = [h; hs(h~=hs)]; end % make uihtml topmost
-h.Position(3:4) = h.Parent.Position(3:4); drawnow; % enable JS in uihtml
-for i = 1:numel(h.UserData)
-    p = getpixelposition(h.UserData{i}{1}, 1);
-    if h.UserData{i}{1}.Type == "figure", p(1:2) = 1; end
-    pos{i} = p; %#ok JS ondragover to deny drop outside rect
+h.Position = [1 1 h.Parent.Position(3:4)]; drawnow; % enable JS in uihtml
+for i = size(h.UserData,1):-1:1 %  redo in case pos changed or resized
+    pos{i} = getpixelposition(h.UserData{i,1}, 1);
+    if h.UserData{i,1}.Type == "figure", pos{i}(1:2) = 1; end
 end
-h.Data.dropZone = pos; % JS ondragover to deny drop outside rect
-h.Data.names = cellstr(names); % JS ondrop uses this for full name(s)
+h.Data.dropZone = pos; % used by JS ondragover
+h.Data.names = cellstr(names); % hard to get path in JS
+ww.setActivateCurrentWindow(true);
 
 %% fired by javascript Data change in ondrop and ondragleave
+% <!-- help text is actually javascript for HTMLSource. Touch with care! -->
 function DnD_callback(h, e)
-h.Position(3:4) = 0; % other components in uifigure will work properly
-if e.Data.event == "dragleave", return; end % DnD revoked
-[obj, dropFcn] = h.UserData{e.Data.index+1}{:};
-dat = rmfield(e.Data, {'event' 'index'});
-if iscell(dropFcn), feval(dropFcn{1}, obj, dat, dropFcn{2:end});
-else, feval(dropFcn, obj, dat);
-end
-
-%% javascript for HTMLSource
-function JS_DnD_html
 % <div hidden></div>
 % <script type="text/javascript">
-%     function setup(htmlComponent) {
-%         document.ondragover = (e) => {
-%             e.returnValue = false
-%             if(!(htmlComponent.Data.hasOwnProperty("dropZone"))) return
-%             for(var i = 0; i < htmlComponent.Data.dropZone.length; i++) {
-%                 if(inRect(e.clientX, e.clientY, htmlComponent.Data.dropZone[i])) return
-%             }
-%             e.dataTransfer.dropEffect = "none"
+%   function setup(h) {
+%     document.ondragover = (e) => {
+%       e.returnValue = false // preventDefault & stopPropagation
+%       var i, x = e.clientX+1, y = document.body.clientHeight-e.clientY
+%       for (i = h.Data.dropZone.length-1; i >= 0; i--) {
+%         var p = h.Data.dropZone[i] // [left bottom width height]
+%         if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {
+%           h.Data.event = "dragover" // no need: not fire callback
+%           h.Data.index = i
+%           return
 %         }
-%         document.body.ondrop = (e) => {
-%             e.returnValue = false
-%             if(!(htmlComponent.Data.hasOwnProperty("dropZone"))) return
-%             var n = htmlComponent.Data.dropZone.length
-%             for(var i = n-1; i >= 0 && n > 1; i--) {
-%                 if(inRect(e.clientX, e.clientY, htmlComponent.Data.dropZone[i])) break
-%             }
-%             htmlComponent.Data = {
-%               "event": "drop", 
-%               "names": htmlComponent.Data.names,
-%               "ctrlKey": e.ctrlKey,
-%               "shiftKey": e.shiftKey,
-%               "index": i
-%             }
-%         }
-%         document.ondragleave = (e) => {
-%             htmlComponent.Data = {"event": "dragleave"}
-%         }
+%       }
+%       e.dataTransfer.dropEffect = "none" // disable drop
 %     }
-%     function inRect(x, y, p) { // Matlab p = [left bottom width height]
-%         x = x + 1; y = document.body.clientHeight - y
-%         return (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3])
+%     document.body.ondrop = (e) => {
+%       e.returnValue = false
+%       h.Data.event = "drop" 
+%       h.Data.ctrlKey = e.ctrlKey
+%       h.Data.shiftKey = e.shiftKey
+%       h.Data = h.Data // fire callback
 %     }
+%     document.ondragleave = (e) => { // Data struct kept even dragleave
+%       h.Data.event = "dragleave"
+%       h.Data = h.Data
+%     }
+%   }
 % </script>
 
+if e.Data.event == "dragover", return; end % not needed, just in case
+h.Position(3:4) = 0; % other components in uifigure will work properly
+if e.Data.event == "dragleave", return; end % DnD revoked
+[target, dropFcn] = h.UserData{e.Data.index+1,:};
+dat = rmfield(e.Data, {'event' 'index' 'dropZone'});
+if iscell(dropFcn), feval(dropFcn{1}, target, dat, dropFcn{2:end});
+else, feval(dropFcn, target, dat);
+end
 %%
