@@ -81,4 +81,3 @@ function drop(h, ~, ww)
     args = [h.UserData(jsondecode(ww.executeJS('uiFileDnD.index'))+1,:) dat];
     if iscell(args{1}), args = [args{1}(1) args(2:3) args{1}(2:end)]; end
     feval(args{:});
-end
