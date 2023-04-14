@@ -32,37 +32,38 @@ end
 
 drawnow; ww = matlab.internal.webwindowmanager.instance.windowList;
 ww = ww(strcmp(matlab.ui.internal.FigureServices.getFigureURL(fh), {ww.URL}));
-try ww.enableDragAndDropAll; % enable file DnD to whole uifigure
+try ww.enableDragAndDropAll; % DnD to whole uifigure: no-op for Linux till 2021a
 catch, error('Matlab R2020b or later needed for file drag and drop');
 end
 h = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
     'ButtonPushedFcn', {@drop ww}, 'UserData', {dropFcn target}, ...
     'Tag', 'uiFileDnD', 'Visible', 'off', 'HandleVisibility', 'off');
 
-str = "uiFileDnD = {rects: [], index: 0," + newline + ...
-    "    button: dojo.query('.mwPushButton').find(b => b.textContent==='%s')};" + newline + ...
-    "document.ondragenter = (e) => { // prevent default before firing ondragover" + newline + ...
-    "  e.dataTransfer.dropEffect = 'none'; " + newline + ...
-    "  return false;" + newline + ...
-    "};" + newline + ...
-    "document.ondragover = (e) => {" + newline + ...
-    "  e.returnValue = false; // preventDefault & stopPropagation" + newline + ...
-    "  var x = e.clientX+1, y = document.body.clientHeight-e.clientY;" + newline + ...
-    "  for (var i = uiFileDnD.rects.length-1; i >= 0; i--) {" + newline + ...
-    "    var p = uiFileDnD.rects[i]; // [left bottom width height]" + newline + ...
-    "    if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {" + newline + ...
-    "      uiFileDnD.index = i; // target index in rects" + newline + ...
-    "      return; // keep OS default dropEffect" + newline + ...
-    "    };" + newline + ...
-    "  };" + newline + ...
-    "  e.dataTransfer.dropEffect = 'none'; // disable drop" + newline + ...
-    "};" + newline + ...
-    "document.ondrop = (e) => {" + newline + ...
-    "  e.returnValue = false;" + newline + ...
-    "  uiFileDnD.data = {ctrlKey: e.ctrlKey, shiftKey: e.shiftKey};" + newline + ...
-    "  uiFileDnD.button.click(); // fire Matlab callback" + newline + ...
-    "};";
-drawnow; ww.executeJS(sprintf(str, h.Text));
+jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
+    "uiFileDnD = {rects: [], index: 0,"
+    "    button: dojo.query('.mwPushButton').find(b => b.textContent==='%s')};"
+    "document.ondragenter = (e) => { // prevent default before firing ondragover"
+    "  e.dataTransfer.dropEffect = 'none';"
+    "  return false;"
+    "};"
+    "document.ondragover = (e) => {"
+    "  e.returnValue = false; // preventDefault & stopPropagation"
+    "  var x = e.clientX+1, y = document.body.clientHeight-e.clientY;"
+    "  for (var i = uiFileDnD.rects.length-1; i >= 0; i--) {"
+    "    var p = uiFileDnD.rects[i]; // [left bottom width height]"
+    "    if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {"
+    "      uiFileDnD.index = i; // target index in rects"
+    "      return; // keep OS default dropEffect"
+    "    };"
+    "  };"
+    "  e.dataTransfer.dropEffect = 'none'; // disable drop"
+    "};"
+    "document.ondrop = (e) => {"
+    "  e.returnValue = false;"
+    "  uiFileDnD.data = {ctrlKey: e.ctrlKey, shiftKey: e.shiftKey};"
+    "  uiFileDnD.button.click(); // fire Matlab callback"
+    "};"], newline));
+drawnow; ww.executeJS(sprintf(jsStr, h.Text));
 ww.FileDragDropCallback = {@dragEnter h};
 
 %% fired when drag enters uifigure
@@ -76,9 +77,9 @@ h.Text = cellstr(names); % store file names
 
 %% fired by javascript fake button press in ondrop
 function drop(h, ~, ww)
-    dat = jsondecode(ww.executeJS('uiFileDnD.data'));
-    dat.names = h.Text;
-    args = [h.UserData(jsondecode(ww.executeJS('uiFileDnD.index'))+1,:) dat];
-    if iscell(args{1}), args = [args{1}(1) args(2:3) args{1}(2:end)]; end
-    feval(args{:});
-end
+dat = jsondecode(ww.executeJS('uiFileDnD.data'));
+dat.names = h.Text;
+args = [h.UserData(jsondecode(ww.executeJS('uiFileDnD.index'))+1,:) dat];
+if iscell(args{1}), args = [args{1}(1) args(2:3) args{1}(2:end)]; end
+feval(args{:});
+%%
