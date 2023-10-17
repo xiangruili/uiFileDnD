@@ -40,20 +40,25 @@ h = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
     'Tag', 'uiFileDnD', 'Visible', 'off', 'HandleVisibility', 'off');
 
 jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
-    "uiFileDnD = {rects: [], index: 0,"
-    "    button: dojo.query('.mwPushButton').find(b => b.textContent==='%s')};"
+%     """use strict"";"
+    "let uiFileDnD = {rects: [], index: 0, lastOver: 0,"
+    "      button: dojo.query('.mwPushButton').find(b => b.textContent==='%s')};"
     "document.ondragenter = (e) => { // prevent default before firing ondragover"
     "  e.dataTransfer.dropEffect = 'none';"
     "  return false;"
     "};"
     "document.ondragover = (e) => {"
     "  e.returnValue = false; // preventDefault & stopPropagation"
-    "  var x = e.clientX+1, y = document.body.clientHeight-e.clientY;"
-    "  for (var i = uiFileDnD.rects.length-1; i >= 0; i--) {"
-    "    var p = uiFileDnD.rects[i]; // [left bottom width height]"
-    "    if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {"
-    "      uiFileDnD.index = i; // target index in rects"
-    "      return; // keep OS default dropEffect"
+    "  let now = new Date().getTime();"
+    "  if (now > uiFileDnD.lastOver+16) {"
+    "    uiFileDnD.lastOver = now;"
+    "    let x = e.clientX+1, y = document.body.clientHeight-e.clientY;"
+    "    for (let i = uiFileDnD.rects.length-1; i >= 0; i--) {"
+    "      let p = uiFileDnD.rects[i]; // [left bottom width height]"
+    "      if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {"
+    "        uiFileDnD.index = i; // target index in rects"
+    "        return; // keep OS default dropEffect"
+    "      };"
     "    };"
     "  };"
     "  e.dataTransfer.dropEffect = 'none'; // disable drop"
@@ -62,7 +67,7 @@ jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
     "  e.returnValue = false;"
     "  uiFileDnD.data = {ctrlKey: e.ctrlKey, shiftKey: e.shiftKey};"
     "  uiFileDnD.button.click(); // fire Matlab callback"
-    "};"], newline));
+    "};" ], newline));
 drawnow; ww.executeJS(sprintf(jsStr, h.Text));
 ww.FileDragDropCallback = {@dragEnter h};
 
