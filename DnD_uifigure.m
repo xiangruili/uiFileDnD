@@ -41,7 +41,8 @@ h = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
 
 jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
 %     """use strict"";"
-    "let uiFileDnD = {rects: [], index: 0, lastOver: 0,"
+    "let uiFileDnD = {rects: [], lastOver: 0,"
+    "      data: {ctrlKey: false, shiftKey: false, index: 0},"
     "      button: dojo.query('.mwPushButton').find(b => b.textContent==='%s')};"
     "document.ondragenter = (e) => { // prevent default before firing ondragover"
     "  e.dataTransfer.dropEffect = 'none';"
@@ -50,22 +51,22 @@ jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
     "document.ondragover = (e) => {"
     "  e.returnValue = false; // preventDefault & stopPropagation"
     "  let now = new Date().getTime();"
-    "  if (now > uiFileDnD.lastOver+16) {"
-    "    uiFileDnD.lastOver = now;"
-    "    let x = e.clientX+1, y = document.body.clientHeight-e.clientY;"
-    "    for (let i = uiFileDnD.rects.length-1; i >= 0; i--) {"
-    "      let p = uiFileDnD.rects[i]; // [left bottom width height]"
-    "      if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {"
-    "        uiFileDnD.index = i; // target index in rects"
-    "        return; // keep OS default dropEffect"
-    "      };"
+    "  if (now < uiFileDnD.lastOver+16) { return; }"
+    "  uiFileDnD.lastOver = now;"
+    "  let x = e.clientX+1, y = document.body.clientHeight-e.clientY;"
+    "  for (let i = uiFileDnD.rects.length-1; i >= 0; i--) {"
+    "    let p = uiFileDnD.rects[i]; // [left bottom width height]"
+    "    if (x>=p[0] && y>=p[1] && x<p[0]+p[2] && y<p[1]+p[3]) {"
+    "      uiFileDnD.data.index = i; // target index in rects"
+    "      return; // keep OS default dropEffect"
     "    };"
     "  };"
     "  e.dataTransfer.dropEffect = 'none'; // disable drop"
     "};"
     "document.ondrop = (e) => {"
     "  e.returnValue = false;"
-    "  uiFileDnD.data = {ctrlKey: e.ctrlKey, shiftKey: e.shiftKey};"
+    "  uiFileDnD.data.ctrlKey = e.ctrlKey;"
+    "  uiFileDnD.data.shiftKey = e.shiftKey;"
     "  uiFileDnD.button.click(); // fire Matlab callback"
     "};" ], newline));
 drawnow; ww.executeJS(sprintf(jsStr, h.Text));
@@ -84,7 +85,7 @@ h.Text = cellstr(names); % store file names
 function drop(h, ~, ww)
 dat = jsondecode(ww.executeJS('uiFileDnD.data'));
 dat.names = h.Text;
-args = [h.UserData(jsondecode(ww.executeJS('uiFileDnD.index'))+1,:) dat];
+args = [h.UserData(dat.index+1,:) rmfield(dat, 'index')];
 if iscell(args{1}), args = [args{1}(1) args(2:3) args{1}(2:end)]; end
 feval(args{:});
 %%
