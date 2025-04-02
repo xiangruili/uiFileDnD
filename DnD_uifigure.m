@@ -74,7 +74,7 @@ ww.FileDragDropCallback = {@dragEnter h};
 
 %% fired when drag enters uifigure
 function dragEnter(ww, names, h)
-for i = size(h.UserData,1):-1:1 %  redo in case pos changed or resized
+for i = size(h.UserData,1):-1:1 % redo in case pos changed or resized
     p{i} = round(getpixelposition(h.UserData{i,2}, 1));
     if h.UserData{i,2}.Type == "figure", p{i}(1:2) = 1; end
 end
