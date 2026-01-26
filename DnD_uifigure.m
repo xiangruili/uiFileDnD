@@ -34,9 +34,9 @@ end
 
 drawnow;
 old = warning('off'); % MATLAB:structOnObject
-ww = struct(struct(struct(fh).Controller).PlatformHost).CEF;
 warning(old);
 try
+    ww = struct(struct(struct(fh).Controller).PlatformHost).CEF;
     ww.enableDragAndDropAll; % DnD to whole uifigure: no-op for Linux till 2021a
 catch me
     if verLessThan('matlab', '9.9') %#ok < R2020b
