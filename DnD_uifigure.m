@@ -1,5 +1,6 @@
 function DnD_uifigure(target, dropFcn)
-% Set up a callback when file/folder is dropped onto a uifigure component.
+% Set up a callback when file/folder is dropped onto a figure/uifigure component
+% since R2020b. It also works for figure since R2025a.
 % 
 % The target can be a uifigure or any uifigure component.
 % 
@@ -16,6 +17,7 @@ function DnD_uifigure(target, dropFcn)
 
 % 201001 Wrote it, by Xiangrui.Li at gmail.com 
 % 201023 Remove uihtml by using ww.executeJS
+% 260125 use ForceIndependentlyHostedFigures for R2025+. Thx EricMagalhaesDelgado 
 
 narginchk(2, 2);
 if isempty(target), target = uifigure; end
@@ -24,26 +26,39 @@ if numel(target)>1 || ~ishandle(target)
 end
 
 fh = ancestor(target, 'figure');
-h = findall(fh, 'Type', 'uibutton', 'Tag', 'uiFileDnD');
-if ~isempty(h)
-    h.UserData(end+1,:) = {dropFcn target};
+hBtn = findall(fh, 'Type', 'uibutton', 'Tag', 'uiFileDnD');
+if ~isempty(hBtn)
+    hBtn.UserData(end+1,:) = {dropFcn target};
     return;
 end
 
-drawnow; ww = matlab.internal.webwindowmanager.instance.windowList;
-ww = ww(strcmp(matlab.ui.internal.FigureServices.getFigureURL(fh), {ww.URL}));
-try ww.enableDragAndDropAll; % DnD to whole uifigure: no-op for Linux till 2021a
-catch, error('Matlab R2020b or later needed for file drag and drop');
+drawnow;
+old = warning('off'); % MATLAB:structOnObject
+ww = struct(struct(struct(fh).Controller).PlatformHost).CEF;
+warning(old);
+try
+    ww.enableDragAndDropAll; % DnD to whole uifigure: no-op for Linux till 2021a
+catch me
+    if verLessThan('matlab', '9.9') %#ok < R2020b
+        error('Matlab R2020b or later needed for file drag and drop');
+    elseif verLessThan('matlab', '25.1') %#ok < R2025a 
+        rethrow(me);
+    else
+        error("For Matlab R2025a or later, add the following line into " + ...
+            "your startup.m file (create it if not exists):" + newline +...
+            "try addprop(groot, 'ForceIndependentlyHostedFigures'); catch, end");
+    end
 end
-h = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
+hBtn = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
     'ButtonPushedFcn', {@drop ww}, 'UserData', {dropFcn target}, ...
     'Tag', 'uiFileDnD', 'Visible', 'off', 'HandleVisibility', 'off');
 
 jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
-%     """use strict"";"
+    % """use strict"";"
     "let uiFileDnD = {rects: [], lastOver: 0,"
-    "      data: {ctrlKey: false, shiftKey: false, index: 0},"
-    "      button: dojo.query('.mwPushButton').find(b => b.textContent==='%s')};"
+    "   data: {ctrlKey: false, shiftKey: false, index: 0},"
+    "   button: [...document.querySelectorAll('.mwPushButton')].find("
+    "      btn => btn.textContent.trim() === '"+hBtn.Text+"')};"
     "document.ondragenter = (e) => { // prevent default before firing ondragover"
     "  e.dataTransfer.dropEffect = 'none';"
     "  return false;"
@@ -69,8 +84,8 @@ jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
     "  uiFileDnD.data.shiftKey = e.shiftKey;"
     "  uiFileDnD.button.click(); // fire Matlab callback"
     "};" ], newline));
-drawnow; ww.executeJS(sprintf(jsStr, h.Text));
-ww.FileDragDropCallback = {@dragEnter h};
+drawnow; ww.executeJS(jsStr);
+ww.FileDragDropCallback = {@dragEnter hBtn};
 
 %% fired when drag enters uifigure
 function dragEnter(ww, names, h)
