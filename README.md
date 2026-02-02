@@ -20,5 +20,7 @@ Note:
  2. File DnD works for uifigure and figure since R2025a.
  3. File DnD works for Linux since R2025a.
  4. Since R2025a, the following line needs to be added into startup.m file:
+
     try addprop(groot, 'ForceIndependentlyHostedFigures'); catch, end
+
  5. java_dnd.m & MLDropTarget.class are for Matlab figure before R2025a, and will be removed in the future.
