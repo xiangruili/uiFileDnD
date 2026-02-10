@@ -7,7 +7,7 @@ function uiFileDnD(target, dropFcn)
 % same as general Matlab callback, like @myFunc or {@myFunc myOtherInput}.
 % In the callback, the first argument is the target, and 2nd the data containing
 %     ctrlKey: 0 % true if Ctrl key is down while dropping
-%    shiftKey: 0 % true if Shift key is down while dropping (not for java_dnd)
+%    shiftKey: 0 % true if Shift key is down while dropping
 %       names: {'/myPath/myFile'} % cellstr for full file/folder names
 % 
 % Example to show dropped file/folder onto uilistbox of uifigure:
@@ -35,8 +35,8 @@ old = warning('off'); cln = onCleanup(@()warning(old)); % MATLAB:structOnObject
 fhS = struct(fh);
 
 % This if-end block is for figure() before R2025a.
-% The block and java_dnd.m & MLDropTarget.class can be removed in future
-if ~isfield(fhS, 'Controller') || isempty(fhS.Controller) % figure before R2025a
+% The block and java_dnd.m & MLDropTarget.class can be removed in the future
+if ~isfield(fhS, 'Controller') || isempty(fhS.Controller)
     java_dnd(target, dropFcn);
     return
 end
