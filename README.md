@@ -1,4 +1,4 @@
-# Drag and Drop OS file/folder(s) into Matlab figure/uifigure (2026.02.01)
+# Drag and Drop OS file/folder(s) into Matlab figure/uifigure (2026.02.09)
 [![View uiFileDnD on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/80656-uifilednd)
 
 The uiFileDnD implementation allows to set up a callback fired when files and/or folders are dropped onto a (ui)figure component. 
@@ -18,7 +18,7 @@ Example to drop file/folder onto listbox of figure:
 Note: 
  1. File DnD onto uifigure works only for Matlab R2020b or later.
  2. File DnD works for uifigure and figure since R2025a.
- 3. File DnD works for Linux since R2025a.
+ 3. File DnD works for uifigure under Linux since R2025a.
  4. Since R2025a, the following line needs to be added into startup.m file:
 
     try addprop(groot, 'ForceIndependentlyHostedFigures'); catch, end
