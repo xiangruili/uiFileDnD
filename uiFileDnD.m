@@ -1,5 +1,5 @@
 function uiFileDnD(target, dropFcn)
-% Set up a callback when file/folder is dropped onto a figure/uifigure component.
+% Set up a callback when file/folder is dropped onto a (ui)figure component.
 % 
 % The target can be figure/uifigure or its component.
 % 
@@ -34,8 +34,8 @@ drawnow;
 old = warning('off'); cln = onCleanup(@()warning(old)); % MATLAB:structOnObject
 fhS = struct(fh);
 
-% This if-end block is for figure() before R2025a.
-% The block and java_dnd.m & MLDropTarget.class can be removed in the future
+% This if-end block is for figure() before R2025a and can be removed in the future,
+% together with java_dnd.m & MLDropTarget.class
 if ~isfield(fhS, 'Controller') || isempty(fhS.Controller)
     java_dnd(target, dropFcn);
     return
@@ -49,16 +49,16 @@ end
 
 try
     ww = struct(struct(fhS.Controller).PlatformHost).CEF;
-    ww.enableDragAndDropAll; % DnD to whole uifigure: no-op for Linux till 2024b
+    ww.enableDragAndDropAll; % DnD to whole figure: no-op for Linux till 2024b
 catch me
-    if verLessThan('matlab', '9.9') %#ok < R2020b
-        error('Matlab R2020b or later needed for file drag and drop');
-    elseif verLessThan('matlab', '25.1') %#ok < R2025a 
-        rethrow(me);
-    else
+    if regexp(me.message, 'Unrecognized.+CEF') % >=R2025a
         error("For Matlab R2025a or later, add the following line into " + ...
             "your startup.m file (create it if not exists):" + newline +...
             "try addprop(groot, 'ForceIndependentlyHostedFigures'); catch, end");
+    elseif regexp(me.message, 'Unrecognized.+enableDragAndDropAll') % <R2020b
+        error('Matlab R2020b or later needed for file drag and drop onto uifigure');
+    else % other error
+        rethrow(me);
     end
 end
 hBtn = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
