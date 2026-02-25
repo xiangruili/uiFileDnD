@@ -31,7 +31,7 @@ end
 
 fh = ancestor(target, 'figure');
 drawnow;
-old = warning('off'); cln = onCleanup(@()warning(old)); % MATLAB:structOnObject
+old = warning('off'); resetWarn = onCleanup(@()warning(old)); % MATLAB:structOnObject
 fhS = struct(fh);
 
 % This if-end block is for figure() before R2025a and can be removed in the future,
