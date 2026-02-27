@@ -1,7 +1,7 @@
-function uiFileDnD(target, dropFcn)
-% Set up a callback when file/folder is dropped onto a (ui)figure component.
+function uiFileDnD(obj, dropFcn)
+% Set up a callback when file/folder is dropped onto a (ui)figure.
 % 
-% The target can be figure/uifigure or its component.
+% The obj can be figure/uifigure or its component.
 % 
 % dropFcn is the callback function when a file is dropped. Its syntax is the
 % same as general Matlab callback, like @myFunc or {@myFunc myOtherInput}.
@@ -11,12 +11,12 @@ function uiFileDnD(target, dropFcn)
 %       names: {'/myPath/myFile'} % cellstr for full file/folder names
 % 
 % Example to show dropped file/folder onto uilistbox of uifigure:
-%  target = uilistbox(uifigure, 'Position', [80 100 400 100]);
-%  uiFileDnD(target, @(o,dat)set(o,'Items',dat.names));
+%  obj = uilistbox(uifigure, 'Position', [80 100 400 100]);
+%  uiFileDnD(obj, @(o,dat)set(o,'Items',dat.names));
 %
 % Example to show dropped file/folder onto listbox of figure:
-%  target = uicontrol(figure, 'Style', 'listbox', 'Position', [80 100 400 100]);
-%  uiFileDnD(target, @(o,dat)set(o,'String',dat.names));
+%  obj = uicontrol(figure, 'Style', 'listbox', 'Position', [80 100 400 100]);
+%  uiFileDnD(obj, @(o,dat)set(o,'String',dat.names));
 
 % 201001 Wrote it, by Xiangrui.Li at gmail.com 
 % 201023 Remove uihtml by using ww.executeJS
@@ -24,12 +24,12 @@ function uiFileDnD(target, dropFcn)
 % 260129 Rename from DnD_uifigure since works for figure too
 
 narginchk(2, 2);
-if isempty(target), target = uifigure; end
-if numel(target)>1 || ~ishandle(target)
+if isempty(obj), obj = uifigure; end
+if numel(obj)>1 || ~ishandle(obj)
     error('uiFileDnD:badInput', 'target must be a single (ui)figure component');
 end
 
-fh = ancestor(target, 'figure');
+fh = ancestor(obj, 'figure');
 drawnow;
 old = warning('off'); resetWarn = onCleanup(@()warning(old)); % MATLAB:structOnObject
 fhS = struct(fh);
@@ -37,13 +37,13 @@ fhS = struct(fh);
 % This if-end block is for figure() before R2025a and can be removed in the future,
 % together with java_dnd.m & MLDropTarget.class
 if ~isfield(fhS, 'Controller') || isempty(fhS.Controller)
-    java_dnd(target, dropFcn);
+    java_dnd(obj, dropFcn);
     return
 end
 
 hBtn = findall(fh, 'Type', 'uibutton', 'Tag', 'uiFileDnDBtn');
 if ~isempty(hBtn)
-    hBtn.UserData(end+1,:) = {dropFcn target};
+    hBtn.UserData(end+1,:) = {dropFcn obj};
     return;
 end
 
@@ -62,7 +62,7 @@ catch me
     end
 end
 hBtn = uibutton(fh, 'Position', [1 1 0 0], 'Text', '4JS2identify_me', ...
-    'ButtonPushedFcn', {@drop ww}, 'UserData', {dropFcn target}, ...
+    'ButtonPushedFcn', {@drop ww}, 'UserData', {dropFcn obj}, ...
     'Tag', 'uiFileDnDBtn', 'Visible', 'off', 'HandleVisibility', 'off');
 
 jsStr = char(strjoin([ ... % webwindow accepts only char at least for R2020b
@@ -102,7 +102,7 @@ ww.FileDragDropCallback = {@dragEnter hBtn};
 %% fired when drag enters figure
 function dragEnter(ww, names, hBtn)
 for i = size(hBtn.UserData,1):-1:1 % redo in case pos changed or resized
-    p{i} = round(getpixelposition(hBtn.UserData{i,2}, 1));
+    try p{i} = round(getpixelposition(hBtn.UserData{i,2}, 1)); catch, continue; end
     if hBtn.UserData{i,2}.Type == "figure", p{i}(1:2) = 1; end
 end
 ww.executeJS(['uiFileDnDJS.rects=' jsonencode(p)]);
